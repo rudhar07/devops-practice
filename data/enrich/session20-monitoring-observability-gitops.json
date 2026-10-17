@@ -1,0 +1,211 @@
+{
+  "slug": "session20-monitoring-observability-gitops",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "A metric is a numeric measurement over time, such as requests per second, CPU usage or error count, stored as time-series samples with labels.",
+      "distractors": "Parsers, images and branches aren't measurements; a full record of each event is a log.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "A log is a timestamped record of discrete events (e.g. 'GET /api 500 in 120ms'), ideally structured as JSON so it can be searched.",
+      "distractors": "Regions, PVCs and subnets are infrastructure objects, not event records.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "A distributed trace shows one request's path across services as a tree of spans with timings, linked by a shared trace ID (e.g. OpenTelemetry with Jaeger or Tempo).",
+      "distractors": "Image tags, commit hashes and shell variables are identifiers, not request views.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "Prometheus collects (pulls/scrapes) and stores time-series metrics and lets you query them with PromQL; Alertmanager handles the alerts it fires.",
+      "distractors": "Building images, provisioning VPCs and hosting Git are jobs for Docker, Terraform and GitHub/GitLab.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "Grafana visualises metrics (and logs and traces) from data sources like Prometheus, Loki and Tempo, and is used to build dashboards and alerts.",
+      "distractors": "Helm builds charts, SAST tools scan code and the kube-scheduler schedules Pods.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "Observability lets engineers infer internal system behaviour from external telemetry (metrics, logs, traces), including failures nobody predicted.",
+      "distractors": "It speeds up incident response rather than avoiding it, relies on logs instead of disabling them, and complements testing rather than replacing it.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "GitOps manages the desired system state through version-controlled Git: changes are made by commit or PR, and an agent in the cluster pulls and applies them continuously.",
+      "distractors": "GitOps runs on Kubernetes rather than replacing it, avoids manual changes, and should never store plaintext passwords (use Sealed Secrets, SOPS or External Secrets).",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "In GitOps, the source of truth is the desired configuration stored in Git; whatever the cluster runs is reconciled to match it.",
+      "distractors": "Local terminals, untracked files and live Pods are exactly the sources of drift that GitOps eliminates.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "Argo CD is a GitOps controller that reconciles Kubernetes deployments with Git: it compares live state with manifests in a repo, shows OutOfSync, and syncs (manually or automatically).",
+      "distractors": "It doesn't build images, resolve DNS or compile code; CI does building, then Argo CD handles deployment.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "Configuration drift is when actual state differs from the declared desired state, e.g. someone runs `kubectl scale` by hand; GitOps tools detect it and can self-heal.",
+      "distractors": "Identical images, merged branches and stored metrics describe consistency or normal operation, not drift.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Exposes a /metrics endpoint (client library / exporter)",
+          "patterns": [
+            "/metrics",
+            "prometheus_client",
+            "prom-client",
+            "exporter",
+            "promhttp"
+          ]
+        },
+        {
+          "label": "Configures a scrape job (scrape_configs / ServiceMonitor)",
+          "patterns": [
+            "scrape_configs",
+            "servicemonitor",
+            "podmonitor"
+          ]
+        },
+        {
+          "label": "Sets the scrape target",
+          "patterns": [
+            "targets\\s*:",
+            "static_configs",
+            "kubernetes_sd_configs",
+            "endpoints\\s*:"
+          ]
+        },
+        {
+          "label": "Verifies the target is healthy (Targets page / up == 1)",
+          "patterns": [
+            "\\bup\\b",
+            "/targets",
+            "\\bhealth"
+          ]
+        },
+        {
+          "label": "Identifies at least two metrics",
+          "patterns": [
+            "_total\\b[\\s\\S]*(_seconds|_bytes|_bucket)",
+            "(_seconds|_bytes|_bucket)[\\s\\S]*_total\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# app.py: expose metrics with the Python client\nfrom prometheus_client import Counter, Histogram, start_http_server\nimport random, time\n\nREQUESTS = Counter('http_requests_total', 'Total HTTP requests', ['method', 'status'])\nLATENCY = Histogram('http_request_duration_seconds', 'Request latency in seconds')\n\nstart_http_server(8000)          # serves http://localhost:8000/metrics\nwhile True:\n    with LATENCY.time():\n        time.sleep(random.random() / 10)\n    REQUESTS.labels('GET', '200').inc()\n\n# prometheus.yml\nglobal:\n  scrape_interval: 15s\nscrape_configs:\n  - job_name: 'myapp'\n    metrics_path: /metrics\n    static_configs:\n      - targets: ['host.docker.internal:8000']   # or app:8000 on the same Docker network\n\ndocker run -d --name prometheus -p 9090:9090 -v $PWD/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus\n\n# Verify\ncurl -s localhost:8000/metrics | head\n# Open http://localhost:9090/targets: job \"myapp\" State UP\n# PromQL: up{job=\"myapp\"}  returns 1\n# Metrics identified:\n#   http_requests_total                  counter: requests served (use rate())\n#   http_request_duration_seconds_bucket histogram: latency distribution (use histogram_quantile)\n#   process_cpu_seconds_total            counter: CPU time, exported automatically by the client",
+      "explanation": "Tests the Prometheus pull model: the app exposes text metrics on /metrics, and Prometheus scrapes the targets listed in scrape_configs (or a ServiceMonitor with the Prometheus Operator). Healthy means State UP on Status > Targets and `up == 1`; a DOWN target usually means a wrong host or port or a network issue. Name the metrics and their types: counters end in _total, and histograms expose _bucket, _sum and _count."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Request rate panel (rate of request counter)",
+          "patterns": [
+            "\\brate\\s*\\(",
+            "\\birate\\s*\\("
+          ]
+        },
+        {
+          "label": "Error panel (5xx / error ratio)",
+          "patterns": [
+            "5\\.\\.",
+            "5xx",
+            "error"
+          ]
+        },
+        {
+          "label": "Latency panel (histogram_quantile / p95)",
+          "patterns": [
+            "histogram_quantile",
+            "latency",
+            "\\bp9[59]\\b"
+          ]
+        },
+        {
+          "label": "Uses Prometheus as the Grafana data source",
+          "patterns": [
+            "data\\s*source",
+            "datasource"
+          ]
+        },
+        {
+          "label": "Explains what each panel indicates",
+          "patterns": [
+            "indicat",
+            "shows",
+            "means"
+          ]
+        }
+      ],
+      "modelAnswer": "# Grafana: Connections > Data sources > Add Prometheus, URL http://prometheus:9090\n# Dashboards > New > Add visualization (Time series), one panel per query\n\nPanel 1: Request rate (req/s)\nsum(rate(http_requests_total[5m]))\n# shows throughput: traffic level, spikes and drops (a sudden drop may mean an outage upstream)\n\nPanel 2: Error rate (% 5xx)\n100 * sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))\n# shows the share of failing requests; this indicates user-facing failures and is the usual alert/SLO signal\n\nPanel 3: Latency p95 (seconds)\nhistogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))\n# shows how slow the slowest 5% of requests are; rising p95 indicates saturation or slow dependencies\n\n# Set units (req/s, percent, seconds), add thresholds, save the dashboard, and optionally export its JSON to Git",
+      "explanation": "Tests the RED method (Rate, Errors, Duration) with correct PromQL. Counters must be wrapped in `rate()`, never graphed raw; errors should be a ratio, not a raw count; and latency uses `histogram_quantile` over `rate(..._bucket)` aggregated `by (le)`. Each panel needs a one-line explanation of what a change in it tells you."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Defines an Argo CD Application (repoURL / path)",
+          "patterns": [
+            "kind\\s*:\\s*application\\b",
+            "\\bargocd\\s+app\\s+create\\b",
+            "repourl"
+          ]
+        },
+        {
+          "label": "Points at a Git repo path / target revision",
+          "patterns": [
+            "repourl",
+            "--repo\\b",
+            "targetrevision"
+          ]
+        },
+        {
+          "label": "Enables or runs sync (automated / argocd app sync)",
+          "patterns": [
+            "automated",
+            "\\bargocd\\s+app\\s+sync\\b"
+          ]
+        },
+        {
+          "label": "Changes replicas in Git (commit and push)",
+          "patterns": [
+            "\\bgit\\s+push\\b",
+            "\\bgit\\s+commit\\b"
+          ]
+        },
+        {
+          "label": "Edits the replica count",
+          "patterns": [
+            "replicas"
+          ]
+        },
+        {
+          "label": "Verifies reconciliation in the cluster (kubectl get / argocd app get)",
+          "patterns": [
+            "\\bkubectl\\s+get\\b",
+            "\\bargocd\\s+app\\s+(get|wait)\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# Install Argo CD\nkubectl create namespace argocd\nkubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml\n\n# Git repo (e.g. https://github.com/<you>/gitops-demo) contains k8s/deployment.yaml with replicas: 2\n\n# application.yaml\napiVersion: argoproj.io/v1alpha1\nkind: Application\nmetadata:\n  name: web\n  namespace: argocd\nspec:\n  project: default\n  source:\n    repoURL: https://github.com/<you>/gitops-demo.git\n    targetRevision: main\n    path: k8s\n  destination:\n    server: https://kubernetes.default.svc\n    namespace: web\n  syncPolicy:\n    automated:\n      prune: true\n      selfHeal: true\n    syncOptions:\n      - CreateNamespace=true\n\nkubectl apply -f application.yaml\nkubectl get applications -n argocd       # web  Synced  Healthy\nkubectl get deploy -n web                # READY 2/2\n\n# Change desired state in Git\nsed -i 's/replicas: 2/replicas: 4/' k8s/deployment.yaml\ngit commit -am \"scale web to 4 replicas\" && git push\n\n# Argo CD polls about every 3 minutes (or use a webhook / argocd app sync web)\nargocd app get web                        # Sync Status: Synced to <new commit>\nkubectl get deploy -n web                 # READY 4/4\n\n# Drift test: kubectl scale deploy/<name> -n web --replicas=1 -> selfHeal restores 4",
+      "explanation": "Tests the GitOps loop: Git holds desired state, and Argo CD's Application watches a repo, revision and path and reconciles the cluster to it. With `automated` sync the new replica count is applied after the next poll (default about 3 minutes) or a webhook, and `selfHeal` reverts manual drift. Verify by checking that the Application is Synced/Healthy at the new commit and that the Deployment's READY count matches the value in Git."
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "slug": "session10-k8s-core-objects",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "A Deployment manages desired replicas and rolling updates: you declare the Pod template and replica count, and it creates ReplicaSets, replaces Pods gradually on change, and keeps revision history for rollback.",
+      "distractors": "Cluster state lives in etcd, DNS zones are outside Kubernetes, and images are built by tools like Docker, not Deployments.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "A ReplicaSet ensures a desired number of matching Pods are running: it counts Pods matching its label selector and creates or deletes Pods to reach `spec.replicas`.",
+      "distractors": "It cannot stop nodes failing (it reacts by recreating Pods elsewhere), does not give Pods public IPs, and does not sign images.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "`spec.replicas` sets how many Pods a Deployment should run. Desired state lives under `spec`; observed values appear under `status` (e.g. `status.readyReplicas`).",
+      "distractors": "`metadata` holds names/labels, `spec.ports` belongs to Services/containers, and `status.desiredNodes` does not exist.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "Labels are key/value pairs for selecting and organizing resources: Services, ReplicaSets and `kubectl get -l` all find Pods by label, and labels let you group by app, tier, environment, etc.",
+      "distractors": "Labels do not partition disks, install Helm, or encrypt anything.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "A label selector is used for matching resources with specified labels, e.g. `app=web` or `tier in (frontend,backend)`. Services and controllers use it to decide which Pods they own or route to.",
+      "distractors": "Git commits, Docker build stages and shell history are not selected with Kubernetes selectors.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "`kubectl scale deployment <name> --replicas=N` changes the replica count (equivalent to editing `spec.replicas`).",
+      "distractors": "duplicate, increase and resize are not valid kubectl verbs for this; you scale the Deployment, not individual Pods or nodes.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "When a Deployment Pod crashes, a controller works to restore desired state: the kubelet restarts the container per restartPolicy, and if the Pod is deleted or its node dies, the ReplicaSet controller creates a replacement.",
+      "distractors": "Git does not roll back, the Deployment is not deleted, and the cluster keeps running.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "`kubectl rollout status deployment/<name>` watches a rollout until it completes (or fails its progress deadline); `kubectl rollout history` and `rollout undo` are its companions.",
+      "distractors": "There is no `kubectl get dns` or `kubectl helm` subcommand, and `kubectl logs` reads container logs, not rollout progress.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "A rolling update gradually replaces old Pods with new ones, bounded by `maxSurge` and `maxUnavailable`, so the application stays available during the change.",
+      "distractors": "It does not change namespaces, restart the control plane, or delete nodes.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "A Deployment creates and manages ReplicaSets: each Pod-template change creates a new ReplicaSet, and the Deployment scales the new one up and the old one down.",
+      "distractors": "Secrets and ConfigMaps hold data and PersistentVolumes are storage; none of them own ReplicaSets.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Creates an Nginx Pod (kubectl run / kind: Pod)",
+          "patterns": [
+            "kubectl\\s+run\\b",
+            "kind:\\s*pod\\b"
+          ]
+        },
+        {
+          "label": "Checks status (kubectl get / describe pod)",
+          "patterns": [
+            "kubectl\\s+get\\s+(pods?|po)\\b",
+            "kubectl\\s+describe\\s+(pods?|po)\\b"
+          ]
+        },
+        {
+          "label": "Shows labels (--show-labels / -L / -l)",
+          "patterns": [
+            "--show-labels\\b",
+            "\\s-L\\s",
+            "\\s-l\\s",
+            "\\.metadata\\.labels"
+          ]
+        },
+        {
+          "label": "Shows the Pod IP (-o wide / podIP)",
+          "patterns": [
+            "-o\\s*wide\\b",
+            "podIP"
+          ]
+        },
+        {
+          "label": "Reads logs (kubectl logs)",
+          "patterns": [
+            "kubectl\\s+logs\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "kubectl run nginx --image=nginx:1.27 --labels=app=web,tier=frontend --port=80\nkubectl get pod nginx                         # STATUS Running, READY 1/1\nkubectl get pod nginx --show-labels           # app=web,tier=frontend\nkubectl get pod nginx -o wide                 # Pod IP and node\nkubectl get pod nginx -o jsonpath='{.status.podIP}{\"\\n\"}'\nkubectl describe pod nginx                    # labels, IP, conditions, events\nkubectl logs nginx                            # nginx startup / access logs",
+      "explanation": "Tests creating a bare Pod and reading its key properties. Verify the Pod reaches Running with READY 1/1, that its labels are displayed, that the Pod IP is shown (from `-o wide`, describe, or jsonpath), and that logs are retrieved. A YAML manifest with `kind: Pod` applied via `kubectl apply -f` is equally valid."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Creates a Deployment with 2 replicas",
+          "patterns": [
+            "--replicas[\\s=]+2\\b",
+            "replicas:\\s*2\\b"
+          ]
+        },
+        {
+          "label": "Scales to 5 (kubectl scale --replicas=5)",
+          "patterns": [
+            "scale\\b[^\\n]*--replicas[\\s=]+5\\b"
+          ]
+        },
+        {
+          "label": "Scales back to 2",
+          "patterns": [
+            "scale\\b[^\\n]*--replicas[\\s=]+2\\b"
+          ]
+        },
+        {
+          "label": "Verifies replica count (kubectl get deploy / pods)",
+          "patterns": [
+            "kubectl\\s+get\\s+(deployments?|deploy|rs|replicasets?|pods?|po)\\b",
+            "rollout\\s+status\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "kubectl create deployment web --image=nginx:1.27 --replicas=2\nkubectl rollout status deployment/web\nkubectl get deployment web          # READY 2/2\n\nkubectl scale deployment web --replicas=5\nkubectl rollout status deployment/web\nkubectl get deployment web          # READY 5/5\nkubectl get pods -l app=web         # 5 Pods Running\n\nkubectl scale deployment web --replicas=2\nkubectl get deployment web          # READY 2/2 (3 Pods Terminating, then gone)\nkubectl get rs -l app=web           # same ReplicaSet, DESIRED/CURRENT 2",
+      "explanation": "Tests imperative scaling of a Deployment and verifying the result. Check the READY column (e.g. 5/5) after each step and that the Pod count follows. Scaling does not create a new ReplicaSet or rollout revision because the Pod template is unchanged; editing `replicas:` in YAML and re-applying is an equally valid approach."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Deploys version 1",
+          "patterns": [
+            "kubectl\\s+create\\s+deployment\\b",
+            "kubectl\\s+apply\\b"
+          ]
+        },
+        {
+          "label": "Rolls out version 2 (set image / apply / patch)",
+          "patterns": [
+            "set\\s+image\\b",
+            "kubectl\\s+patch\\b",
+            "kubectl\\s+edit\\b",
+            "apply\\s+-f\\s+\\S*v2"
+          ]
+        },
+        {
+          "label": "Watches the rollout (kubectl rollout status)",
+          "patterns": [
+            "rollout\\s+status\\b"
+          ]
+        },
+        {
+          "label": "Rolls back (kubectl rollout undo)",
+          "patterns": [
+            "rollout\\s+undo\\b"
+          ]
+        },
+        {
+          "label": "Checks history or current image",
+          "patterns": [
+            "rollout\\s+history\\b",
+            "jsonpath",
+            "kubectl\\s+describe\\b",
+            "-o\\s*wide\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# v1\nkubectl create deployment app --image=nginx:1.26 --replicas=3\nkubectl rollout status deployment/app\nkubectl annotate deployment/app kubernetes.io/change-cause=\"v1: nginx 1.26\"\n\n# Rolling update to v2\nkubectl set image deployment/app nginx=nginx:1.27\nkubectl annotate deployment/app kubernetes.io/change-cause=\"v2: nginx 1.27\" --overwrite\nkubectl rollout status deployment/app       # old Pods replaced gradually\nkubectl get rs -l app=app                   # new RS at 3, old RS at 0\nkubectl rollout history deployment/app      # revisions 1 and 2\n\n# Roll back to v1\nkubectl rollout undo deployment/app --to-revision=1\nkubectl rollout status deployment/app\nkubectl get deployment app -o jsonpath='{.spec.template.spec.containers[0].image}{\"\\n\"}'   # nginx:1.26",
+      "explanation": "Tests the Deployment rollout lifecycle: update, monitor, history and rollback. Verify the image changes after the update, that `rollout status` reports success, that `rollout history` shows the revisions, and that after `rollout undo` the running image is v1 again (the rolled-back revision is renumbered as the newest). The container name created by `kubectl create deployment --image=nginx` is `nginx`."
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "slug": "session-16-github-actions",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "GitHub Actions workflows are YAML files stored in `.github/workflows/` at the repository root; GitHub only picks up workflow files from that directory.",
+      "distractors": "The .git directory is Git's internal database and is never pushed as content; .kube and .docker are local tool config folders.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "The top-level `on` key lists the events that trigger the workflow, such as push, pull_request, schedule or workflow_dispatch.",
+      "distractors": "`jobs` defines the work, `env` defines variables, and `steps` sits inside a job.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "A job is a group of steps that run on the same runner; jobs run in parallel by default unless linked with `needs`.",
+      "distractors": "Volumes, Services and branches are Docker, Kubernetes and Git concepts, not Actions concepts.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "`runs-on` selects the runner environment for a job, e.g. `ubuntu-latest`, `windows-latest` or a self-hosted runner label.",
+      "distractors": "Branches are chosen in `on:` filters, and namespaces and registries are set inside steps, not by `runs-on`.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "`actions/checkout` clones the repository into the runner workspace; without it, later steps cannot see your code.",
+      "distractors": "The other names are not official actions.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "A step's `run` field executes shell commands on the runner (bash by default on Linux and macOS, pwsh on Windows).",
+      "distractors": "Image digests, node scheduling and VPCs are not things `run` defines; it just runs the commands you give it.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "A step's `uses` field invokes a reusable action (e.g. `actions/setup-node@v4`) or a Docker image, optionally passing inputs with `with`.",
+      "distractors": "`uses` does not create repositories, write state or start daemons; it calls packaged action code.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "Sensitive tokens belong in GitHub Actions secrets (repository, environment or organization), referenced as `${{ secrets.NAME }}`; GitHub masks them in logs.",
+      "distractors": "Anything committed to the README or YAML is visible to anyone who can read the repo and stays in Git history, and printing secrets to logs leaks them.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "`needs` declares job dependencies: the job waits for the listed jobs to succeed and can read their outputs.",
+      "distractors": "Git author, Dockerfile stages and port mappings are configured elsewhere.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "The `push` event triggers a workflow when commits (or tags) are pushed, optionally filtered by `branches`, `tags` or `paths`.",
+      "distractors": "docker-build, commit-only and upload are not GitHub Actions events.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Triggers on push (on: push)",
+          "patterns": [
+            "\\bon\\s*:[\\s\\S]*\\bpush\\b",
+            "\\bon\\s*:\\s*\\[?\\s*push"
+          ]
+        },
+        {
+          "label": "Defines a job with a runner (runs-on)",
+          "patterns": [
+            "\\bruns-on\\s*:"
+          ]
+        },
+        {
+          "label": "Checks out the repo (actions/checkout)",
+          "patterns": [
+            "actions/checkout"
+          ]
+        },
+        {
+          "label": "Installs dependencies (npm ci / pip install / etc.)",
+          "patterns": [
+            "\\bnpm\\s+(ci|install)\\b",
+            "\\bpip3?\\s+install\\b",
+            "\\byarn\\s+install\\b",
+            "\\bpnpm\\s+install\\b",
+            "\\bmvn\\b",
+            "\\bgradlew?\\b",
+            "\\bgo\\s+mod\\s+download\\b"
+          ]
+        },
+        {
+          "label": "Builds the application (build step)",
+          "patterns": [
+            "\\bbuild\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/ci.yml\nname: CI\non:\n  push:\n    branches: [main]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Check out code\n        uses: actions/checkout@v4\n      - name: Set up Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: npm\n      - name: Install dependencies\n        run: npm ci\n      - name: Build\n        run: npm run build",
+      "explanation": "Tests the basic workflow skeleton: file under `.github/workflows/`, an `on: push` trigger, a job with `runs-on`, checkout first, then install and build. Verify by pushing a commit and checking that the run in the Actions tab goes green with each step's log visible."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Adds a test step (npm test / pytest / etc.)",
+          "patterns": [
+            "\\bnpm\\s+(run\\s+)?test\\b",
+            "\\bpytest\\b",
+            "\\bgo\\s+test\\b",
+            "\\bmvn\\s+test\\b",
+            "\\bgradlew?\\s+test\\b",
+            "\\byarn\\s+test\\b"
+          ]
+        },
+        {
+          "label": "Shows a failing test failing the run (non-zero exit)",
+          "patterns": [
+            "fail"
+          ]
+        },
+        {
+          "label": "Shows the fixed test passing",
+          "patterns": [
+            "pass",
+            "succe",
+            "green"
+          ]
+        },
+        {
+          "label": "Runs inside a workflow job (runs-on / steps)",
+          "patterns": [
+            "\\bruns-on\\s*:",
+            "\\bsteps\\s*:"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/ci.yml (job excerpt)\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: npm\n      - run: npm ci\n      - name: Run tests\n        run: npm test\n      - run: npm run build\n\n# sum.test.js: deliberately broken first\nconst sum = require('./sum');\ntest('adds numbers', () => { expect(sum(2, 2)).toBe(5); });\n\ngit commit -am \"test: deliberately failing test\" && git push\n# Run fails: npm test exits non-zero, the step and job are marked failed, the build step is skipped\n\n# Fix the assertion to expect(sum(2, 2)).toBe(4)\ngit commit -am \"test: fix assertion\" && git push\n# Run passes: all steps green",
+      "explanation": "Tests that you understand a step fails when its command exits non-zero, which fails the job and skips later steps unless they use `if: always()`. Evidence should be two runs in the Actions tab: a red one with the failing assertion in the test log, then a green one after the fix."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Uploads an artifact (actions/upload-artifact)",
+          "patterns": [
+            "actions/upload-artifact"
+          ]
+        },
+        {
+          "label": "Names the artifact (name:)",
+          "patterns": [
+            "\\bname\\s*:"
+          ]
+        },
+        {
+          "label": "Sets the artifact path (path:)",
+          "patterns": [
+            "\\bpath\\s*:"
+          ]
+        },
+        {
+          "label": "Builds before uploading",
+          "patterns": [
+            "\\bbuild\\b"
+          ]
+        },
+        {
+          "label": "Explains downloading it from the run (Artifacts section / gh run download)",
+          "patterns": [
+            "download"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/ci.yml (steps excerpt)\n      - run: npm ci\n      - run: npm test\n      - run: npm run build\n      - name: Upload build artifact\n        uses: actions/upload-artifact@v4\n        with:\n          name: web-build\n          path: dist/\n          retention-days: 7\n          if-no-files-found: error\n\n# Download: open the run in the Actions tab and use the Artifacts section at the bottom of the summary,\n# or from the CLI:\ngh run download <run-id> -n web-build",
+      "explanation": "Tests persisting build outputs beyond the runner, which is discarded after the job. `actions/upload-artifact@v4` with a `name` and `path` creates a zip attached to the run; `if-no-files-found: error` makes a wrong path fail loudly. Verify that the artifact appears under Artifacts in the run summary and contains the built files."
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "slug": "session2-linux",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "`pwd` (print working directory) prints the absolute path of the directory you are currently in.",
+      "distractors": "`ls` lists contents, `cd` changes directory and `mv` moves or renames files.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "`ls -a` lists all entries, including hidden dotfiles such as `.bashrc` and the `.` and `..` entries.",
+      "distractors": "`pwd`, `rm` and `mkdir` do not list files; `rm -a` and `mkdir -a` are not valid options.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "`chmod` changes file permissions (read, write, execute for user, group and others), e.g. `chmod 755 script.sh`.",
+      "distractors": "Ownership is changed with `chown`/`chgrp`, the hostname with `hostnamectl`, and interfaces with `ip`.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "`grep` searches text in files for lines matching a pattern, e.g. `grep -rn ERROR logs/`.",
+      "distractors": "`pwd` prints the directory, `touch` creates files or updates timestamps, and `mv` moves files.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "`cat` displays a file's contents (it concatenates files to standard output).",
+      "distractors": "`kill` signals processes, `rmdir` removes empty directories and `mkdir` creates directories.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "The pipe `|` passes one command's output (stdout) to another command's input, e.g. `ps aux | grep nginx`.",
+      "distractors": "Redirecting to a file is `>` or `>>`; the pipe has nothing to do with root privileges or deleting files.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "`ps` shows running processes, e.g. `ps aux` for all processes; `top`/`htop` show them live.",
+      "distractors": "`cp` copies, `ls` lists files and `mkdir` creates directories.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "`cd` changes the current directory, e.g. `cd /var/log` or `cd ..`.",
+      "distractors": "`echo` prints text, `pwd` only shows where you are, and `cat` prints file contents.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "`sudo` lets a permitted user run commands with elevated privileges (as root by default), as configured in `/etc/sudoers`.",
+      "distractors": "Pulling images is `docker pull`, symlinks come from `ln -s`, and DNS records from `dig`/`nslookup`.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "`df -h` shows disk space usage by filesystem (size, used, available, mount point) in human-readable units.",
+      "distractors": "`du` reports space used by files/directories, `free -m` shows memory and `uname -a` shows kernel info.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Creates the directories (mkdir -p)",
+          "patterns": [
+            "\\bmkdir\\b"
+          ]
+        },
+        {
+          "label": "Creates sample files (touch / echo >)",
+          "patterns": [
+            "\\btouch\\b",
+            "\\becho\\b[^\\n]*>",
+            "\\bcat\\s*>"
+          ]
+        },
+        {
+          "label": "Lists files (ls)",
+          "patterns": [
+            "\\bls\\b",
+            "\\btree\\b"
+          ]
+        },
+        {
+          "label": "Copies a file (cp)",
+          "patterns": [
+            "\\bcp\\b",
+            "\\brsync\\b"
+          ]
+        },
+        {
+          "label": "Moves or renames a file (mv)",
+          "patterns": [
+            "\\bmv\\b"
+          ]
+        },
+        {
+          "label": "Searches files (grep / find)",
+          "patterns": [
+            "\\bgrep\\b",
+            "\\bfind\\b"
+          ]
+        },
+        {
+          "label": "Deletes files (rm)",
+          "patterns": [
+            "\\brm\\b",
+            "\\brmdir\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# create the structure\nmkdir -p ~/project/{app,logs,config}\ncd ~/project\n\n# sample files\necho 'print(\"hello\")' > app/main.py\necho 'ERROR disk full' > logs/app.log\necho 'INFO started' >> logs/app.log\necho 'port=8080' > config/app.conf\ntouch app/notes.txt\n\n# list\nls -la\nls -R\n\n# copy and move\ncp config/app.conf config/app.conf.bak\nmv app/notes.txt logs/notes.txt\n\n# search\ngrep -rn 'ERROR' logs/\nfind . -name '*.conf'\n\n# delete\nrm config/app.conf.bak\nrm logs/notes.txt\nls -R",
+      "explanation": "Tests everyday file management: building a directory tree, creating files, and using ls, cp, mv, grep/find and rm. When verifying, check that `mkdir -p` (or brace expansion) builds all three subdirectories, and that each operation is followed by an `ls` or similar so the result is visible. Be careful with `rm -r`: always confirm the path first."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Creates the user (useradd / adduser)",
+          "patterns": [
+            "\\buseradd\\b",
+            "\\badduser\\b"
+          ]
+        },
+        {
+          "label": "Creates the group (groupadd / addgroup)",
+          "patterns": [
+            "\\bgroupadd\\b",
+            "\\baddgroup\\b"
+          ]
+        },
+        {
+          "label": "Adds the user to the group (usermod -aG / gpasswd -a)",
+          "patterns": [
+            "\\busermod\\b[^\\n]*-a\\s*G",
+            "\\busermod\\b[^\\n]*-aG",
+            "\\bgpasswd\\b[^\\n]*-a\\b",
+            "\\badduser\\s+examuser\\s+devops\\b"
+          ]
+        },
+        {
+          "label": "Sets ownership (chown / chgrp)",
+          "patterns": [
+            "\\bchown\\b",
+            "\\bchgrp\\b"
+          ]
+        },
+        {
+          "label": "Sets permissions (chmod)",
+          "patterns": [
+            "\\bchmod\\b"
+          ]
+        },
+        {
+          "label": "Verifies (id / groups / ls -l)",
+          "patterns": [
+            "\\bid\\b",
+            "\\bgroups\\b",
+            "\\bls\\s+-\\w*l"
+          ]
+        }
+      ],
+      "modelAnswer": "sudo groupadd devops\nsudo useradd -m -s /bin/bash examuser\nsudo passwd examuser        # set a password interactively\nsudo usermod -aG devops examuser\nid examuser                  # shows devops in the group list\n\n# project directory owned by the group\nsudo mkdir -p /opt/project\nsudo chown -R examuser:devops /opt/project\nsudo chmod -R 2770 /opt/project   # rwx for owner and group, nothing for others; setgid keeps new files in group devops\nls -ld /opt/project\n# drwxrws--- 2 examuser devops 4096 ... /opt/project",
+      "explanation": "Tests user and group administration plus ownership and permissions. Key point: `usermod -aG` must include `-a` (append) or the user is removed from other supplementary groups. Verify with `id examuser` and `ls -ld`; the setgid bit (2 in 2770) makes new files inherit the devops group, which is useful for shared team directories. Group membership only applies to new login sessions."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Checks service status (systemctl status)",
+          "patterns": [
+            "\\bsystemctl\\s+(status|is-active|is-failed)\\b",
+            "\\bservice\\s+\\S+\\s+status\\b"
+          ]
+        },
+        {
+          "label": "Reads service logs (journalctl -u)",
+          "patterns": [
+            "\\bjournalctl\\b"
+          ]
+        },
+        {
+          "label": "Restarts or starts the service",
+          "patterns": [
+            "\\bsystemctl\\s+(restart|start)\\b",
+            "\\bservice\\s+\\S+\\s+(restart|start)\\b"
+          ]
+        },
+        {
+          "label": "Simulates the failure (stop / kill / bad config)",
+          "patterns": [
+            "\\bsystemctl\\s+stop\\b",
+            "\\bkill\\b",
+            "\\bconfig"
+          ]
+        },
+        {
+          "label": "Checks port, process or config (ss / ps / nginx -t)",
+          "patterns": [
+            "\\bss\\b",
+            "\\bnetstat\\b",
+            "\\bps\\b",
+            "\\bnginx\\s+-t\\b",
+            "\\blsof\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# 1. Check the service\nsystemctl status nginx          # Active: active (running) / failed, plus last log lines\nsystemctl is-active nginx\n\n# 2. Simulate a problem: break the config and restart\nsudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak\necho 'this is not valid;' | sudo tee -a /etc/nginx/nginx.conf\nsudo systemctl restart nginx    # fails\n\n# 3. Diagnose\nsystemctl status nginx          # shows 'failed'\njournalctl -u nginx -n 50 --no-pager   # recent logs for this unit\njournalctl -u nginx --since '10 min ago'\nsudo nginx -t                   # config test points at the bad line\nsudo tail -n 20 /var/log/nginx/error.log\nss -tlnp | grep ':80'           # is anything listening on port 80?\nps aux | grep [n]ginx\n\n# 4. Fix and verify\nsudo cp /etc/nginx/nginx.conf.bak /etc/nginx/nginx.conf\nsudo nginx -t\nsudo systemctl restart nginx\nsystemctl status nginx\ncurl -I http://localhost",
+      "explanation": "Tests a systematic service troubleshooting workflow with systemd: status, logs via `journalctl -u <unit>`, then narrowing the cause (config test, listening ports, process list) before fixing and re-verifying. A good answer documents each command and what its output told you, and ends by proving the service is healthy again."
+    }
+  ]
+}

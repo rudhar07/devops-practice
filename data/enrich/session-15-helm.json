@@ -1,0 +1,183 @@
+{
+  "slug": "session-15-helm",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "Helm is a package manager for Kubernetes: it bundles related manifests into a versioned chart and installs, upgrades and rolls them back as a single release.",
+      "distractors": "Container runtimes (containerd, CRI-O), network protocols and hypervisors live at lower layers; Helm only talks to the Kubernetes API.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "A Helm chart is a package of Kubernetes templates and metadata: a directory (or .tgz) with Chart.yaml, values.yaml and a templates/ folder that Helm renders into manifests.",
+      "distractors": "A running Pod is what a chart eventually creates, not the chart itself; disks and Git branches are unrelated.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "Chart.yaml holds chart metadata such as name and version (plus apiVersion: v2, appVersion, description, dependencies).",
+      "distractors": "Logs, certificates and Terraform state are never stored in Chart.yaml.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "values.yaml supplies the default configurable values for templates; templates read them as `.Values.<key>` and users override them with -f or --set.",
+      "distractors": "Registry credentials can be passed as values, but that is not its purpose, and Git history and PIDs have nothing to do with it.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "`helm create <name>` scaffolds a starter chart with Chart.yaml, values.yaml, templates/ (Deployment, Service, Ingress, helpers) and .helmignore.",
+      "distractors": "`helm init` existed only in Helm 2 (to install Tiller) and never created charts; the other commands do not exist.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "`helm install <release> <chart>` renders the chart and creates a new named release in the cluster.",
+      "distractors": "Helm has no `apply` or `deploy` subcommand (that is kubectl/other tools); `helm push` uploads a packaged chart to an OCI registry.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "`helm upgrade <release> <chart>` applies a new chart version or new values to an existing release and records a new revision (`--install` creates it if missing).",
+      "distractors": "There is no `helm restart`, `helm rerun` or `helm patch`; rolling Pods is done by upgrading or with kubectl rollout restart.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "`helm rollback <release> [revision]` returns a release to an earlier revision; with no revision number it goes to the previous one, and it records a new revision number.",
+      "distractors": "Helm has no revert, reset or undo subcommands; `kubectl rollout undo` is the kubectl equivalent for a single Deployment.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "`--set key=value` overrides a single value on the command line (e.g. `--set replicaCount=3`), taking precedence over values.yaml and -f files.",
+      "distractors": "The other flags do not exist in Helm; port-forward is a kubectl command.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "`helm template` renders the chart templates locally and prints the manifests without installing anything (useful for review or piping into kubectl diff).",
+      "distractors": "`helm install --dry-run` is the other way to preview; the listed alternatives are not real Helm commands.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Creates the chart (helm create)",
+          "patterns": [
+            "\\bhelm\\s+create\\b"
+          ]
+        },
+        {
+          "label": "Explains Chart.yaml (chart metadata: name, version)",
+          "patterns": [
+            "chart\\.yaml[\\s\\S]*(metadata|version)"
+          ]
+        },
+        {
+          "label": "Explains values.yaml (default configurable values)",
+          "patterns": [
+            "values\\.yaml[\\s\\S]*(default|configur|override)"
+          ]
+        },
+        {
+          "label": "Explains the templates directory (manifests rendered with values)",
+          "patterns": [
+            "templates[\\s\\S]*(render|manifest|go templat)"
+          ]
+        },
+        {
+          "label": "References values in a template (.Values)",
+          "patterns": [
+            "\\.Values\\."
+          ]
+        }
+      ],
+      "modelAnswer": "helm create webapp\n# webapp/\n#   Chart.yaml        chart metadata: apiVersion v2, name, version (chart version), appVersion, description\n#   values.yaml       default configurable values that templates read via .Values; overridden with -f or --set\n#   templates/        Kubernetes manifests written as Go templates; Helm renders them with the values into real YAML\n#   charts/           packaged dependency charts (subcharts)\n\n# webapp/Chart.yaml\napiVersion: v2\nname: webapp\ndescription: A simple web application\ntype: application\nversion: 0.1.0\nappVersion: \"1.27\"\n\n# webapp/values.yaml\nreplicaCount: 2\nimage:\n  repository: nginx\n  tag: \"1.27\"\nservice:\n  type: ClusterIP\n  port: 80\n\n# webapp/templates/deployment.yaml (excerpt)\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: {{ .Release.Name }}-webapp\nspec:\n  replicas: {{ .Values.replicaCount }}\n  selector:\n    matchLabels:\n      app: {{ .Release.Name }}-webapp\n  template:\n    metadata:\n      labels:\n        app: {{ .Release.Name }}-webapp\n    spec:\n      containers:\n        - name: web\n          image: \"{{ .Values.image.repository }}:{{ .Values.image.tag }}\"\n          ports:\n            - containerPort: 80\n\nhelm lint webapp\nhelm template demo webapp   # render manifests locally to check them",
+      "explanation": "Tests whether you know a chart's anatomy. Chart.yaml is metadata (name, chart version, appVersion), values.yaml holds the defaults, and templates/ contains Go-templated manifests that reference `.Values`, `.Release` and `.Chart`. Check that `helm lint` passes and that `helm template` renders valid YAML."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Installs the release (helm install / upgrade --install)",
+          "patterns": [
+            "\\bhelm\\s+(install|upgrade\\s+(--install|-i)\\b)"
+          ]
+        },
+        {
+          "label": "Configures the image",
+          "patterns": [
+            "image\\.(repository|tag)",
+            "\\bimage\\s*:"
+          ]
+        },
+        {
+          "label": "Configures the replica count",
+          "patterns": [
+            "replica"
+          ]
+        },
+        {
+          "label": "Configures the Service port",
+          "patterns": [
+            "service\\.port",
+            "\\bport\\s*:"
+          ]
+        },
+        {
+          "label": "Renders templates to verify (helm template / --dry-run / get manifest)",
+          "patterns": [
+            "\\bhelm\\s+template\\b",
+            "--dry-run",
+            "\\bhelm\\s+get\\s+manifest\\b"
+          ]
+        },
+        {
+          "label": "Verifies installed resources (kubectl get / helm status)",
+          "patterns": [
+            "\\bkubectl\\s+get\\b",
+            "\\bhelm\\s+(status|list|ls)\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# templates/service.yaml uses the port value\napiVersion: v1\nkind: Service\nmetadata:\n  name: {{ .Release.Name }}-webapp\nspec:\n  type: {{ .Values.service.type }}\n  selector:\n    app: {{ .Release.Name }}-webapp\n  ports:\n    - port: {{ .Values.service.port }}\n      targetPort: 80\n\n# Render first to check the output\nhelm template web ./webapp --set image.repository=nginx --set image.tag=1.27 --set replicaCount=3 --set service.port=8080\n\n# Install with the overrides\nhelm install web ./webapp -n demo --create-namespace \\\n  --set image.repository=nginx \\\n  --set image.tag=1.27 \\\n  --set replicaCount=3 \\\n  --set service.port=8080\n\n# Verify\nhelm list -n demo\nhelm get manifest web -n demo\nhelm get values web -n demo\nkubectl get deploy,svc,pods -n demo\nkubectl get deploy web-webapp -n demo -o jsonpath='{.spec.replicas}'",
+      "explanation": "Tests parameterising a chart and checking what was actually deployed. The image, replicas and Service port must come from `.Values` so `--set` or a values file changes them. Verify both the rendered output (`helm template` or `helm get manifest`) and the live objects (`kubectl get deploy,svc`): 3 ready replicas, the right image, Service on port 8080."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Upgrades the release (helm upgrade)",
+          "patterns": [
+            "\\bhelm\\s+upgrade\\b"
+          ]
+        },
+        {
+          "label": "Inspects revision history (helm history)",
+          "patterns": [
+            "\\bhelm\\s+history\\b"
+          ]
+        },
+        {
+          "label": "Rolls back (helm rollback)",
+          "patterns": [
+            "\\bhelm\\s+rollback\\b"
+          ]
+        },
+        {
+          "label": "Checks final status (helm status / helm list)",
+          "patterns": [
+            "\\bhelm\\s+(status|list|ls)\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# Revision 1 already exists from helm install\nhelm upgrade web ./webapp -n demo --reuse-values --set image.tag=1.27.2 --set replicaCount=4\nhelm history web -n demo\n# REVISION  STATUS      DESCRIPTION\n# 1         superseded  Install complete\n# 2         deployed    Upgrade complete\n\nhelm rollback web 1 -n demo   # or omit 1 to go back to the previous revision\nhelm history web -n demo      # rollback is recorded as new revision 3 (deployed), copying revision 1's config\nhelm status web -n demo\nkubectl get deploy -n demo -o wide",
+      "explanation": "Tests the release lifecycle. Every install, upgrade or rollback creates a new revision, so after rolling back, `helm history` shows revision 3 with the description 'Rollback to 1', not a return to revision 1. Confirm with `helm status` (STATUS: deployed) and that the Deployment's image and replicas match the original values again."
+    }
+  ]
+}

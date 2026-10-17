@@ -1,0 +1,206 @@
+{
+  "slug": "session5-git-github",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "`git init` initializes a local Git repository by creating the hidden `.git` directory in the current folder.",
+      "distractors": "`git boot`, `git create` and `git start` are not Git commands.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "`git add` stages a file: it copies the current content into the index so it will be part of the next commit.",
+      "distractors": "`git fetch` downloads remote data, `git log` shows history and `git push` uploads commits.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "`git commit` records staged changes as a new commit (snapshot) with a message, author and parent.",
+      "distractors": "`git status` and `git diff` only inspect changes, and `git clone` copies a repository.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "`git status` shows the current working tree state: the branch, staged changes, unstaged changes and untracked files.",
+      "distractors": "`git branch -d` deletes a branch, `git gc` cleans up the object database and `git tag -d` deletes a tag.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "`git branch feature` creates a new branch called feature at the current commit (without switching to it; `git switch -c feature` creates and switches).",
+      "distractors": "`git reset` moves the current branch, `git commit` records changes and `git push` uploads; none of them create branches.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "`git merge <branch>` integrates another branch into the current branch, with a fast-forward or a merge commit.",
+      "distractors": "`git fetch` only downloads, `git clean` deletes untracked files and `git stash` shelves uncommitted changes.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "`git clone` copies a repository to a local directory, including its full history, and sets `origin` as the remote.",
+      "distractors": "Clone does not delete branches, rename commits or touch the operating system.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "A pull request is used for reviewing and discussing changes before merge: teammates see the diff, comment, run CI checks and approve.",
+      "distractors": "Docker layers, Kubernetes pods and VPCs are unrelated to code review.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "`.gitignore` lists which untracked paths Git should ignore (e.g. `node_modules/`, `.env`, build output). Files already tracked are not affected until you `git rm --cached` them.",
+      "distractors": "Access control is configured on GitHub, the author comes from `user.name`/`user.email`, and remotes are set with `git remote`.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "`git push` uploads local commits to a remote branch, e.g. `git push origin main`.",
+      "distractors": "`git pull` downloads and merges, `git diff` compares changes and `git show` displays a commit.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Initializes the repository (git init)",
+          "patterns": [
+            "\\bgit\\s+init\\b"
+          ]
+        },
+        {
+          "label": "Adds a README",
+          "patterns": [
+            "readme"
+          ]
+        },
+        {
+          "label": "Stages files (git add)",
+          "patterns": [
+            "\\bgit\\s+add\\b"
+          ]
+        },
+        {
+          "label": "Commits with messages (git commit -m)",
+          "patterns": [
+            "\\bgit\\s+commit\\b"
+          ]
+        },
+        {
+          "label": "Adds the GitHub remote",
+          "patterns": [
+            "\\bgit\\s+remote\\s+add\\b",
+            "\\bgh\\s+repo\\s+create\\b"
+          ]
+        },
+        {
+          "label": "Pushes to GitHub (git push)",
+          "patterns": [
+            "\\bgit\\s+push\\b",
+            "--push\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "mkdir todo-app && cd todo-app\ngit init -b main\n\n# commit 1: README\necho '# Todo App' > README.md\necho 'A tiny CLI todo list.' >> README.md\ngit add README.md\ngit commit -m 'Add README with project description'\n\n# commit 2: application code\necho 'print(\"todo app\")' > app.py\ngit add app.py\ngit commit -m 'Add initial app entry point'\n\n# commit 3: ignore file\nprintf '__pycache__/\\n.env\\n' > .gitignore\ngit add .gitignore\ngit commit -m 'Ignore Python cache and env files'\n\ngit log --oneline\n\n# push to GitHub (create an empty repo named todo-app first)\ngit remote add origin git@github.com:<your-username>/todo-app.git\ngit push -u origin main",
+      "explanation": "Tests the basic Git workflow: init, stage, commit, connect a remote and push. Look for at least three separate commits with meaningful, imperative messages (not 'update'), and `git push -u origin main` so the local branch tracks the remote. Verify with `git log --oneline` and by checking the repository page on GitHub."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Creates a feature branch (switch -c / checkout -b)",
+          "patterns": [
+            "\\bgit\\s+switch\\s+-c\\b",
+            "\\bgit\\s+checkout\\s+-b\\b",
+            "\\bgit\\s+branch\\s+\\S"
+          ]
+        },
+        {
+          "label": "Commits the change",
+          "patterns": [
+            "\\bgit\\s+commit\\b"
+          ]
+        },
+        {
+          "label": "Pushes the branch",
+          "patterns": [
+            "\\bgit\\s+push\\b[^\\n]*feature"
+          ]
+        },
+        {
+          "label": "Opens a Pull Request",
+          "patterns": [
+            "pull request",
+            "\\bgh\\s+pr\\s+create\\b"
+          ]
+        },
+        {
+          "label": "Reviews the diff",
+          "patterns": [
+            "\\bdiff\\b",
+            "files changed"
+          ]
+        },
+        {
+          "label": "Merges into main",
+          "patterns": [
+            "\\bmerge"
+          ]
+        }
+      ],
+      "modelAnswer": "git switch main\ngit pull\ngit switch -c feature/add-health-endpoint\n\n# implement the change\necho 'def health(): return \"ok\"' >> app.py\ngit diff                      # review locally before staging\ngit add app.py\ngit commit -m 'Add health endpoint'\ngit push -u origin feature/add-health-endpoint\n\n# open the Pull Request (web UI or GitHub CLI)\ngh pr create --base main --head feature/add-health-endpoint --title 'Add health endpoint' --body 'Adds a simple health check.'\ngh pr diff                    # review the diff (or the 'Files changed' tab on GitHub)\ngh pr merge --merge --delete-branch\n\n# update local main\ngit switch main\ngit pull\ngit log --oneline --graph",
+      "explanation": "Tests the feature-branch and Pull Request workflow used by most teams. Verify the change was made on a separate branch, pushed with upstream tracking, reviewed as a diff in the PR (Files changed tab or `gh pr diff`) and merged into main, then that local main was updated with `git pull`. Deleting the merged branch keeps the repo tidy."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Creates a second branch",
+          "patterns": [
+            "\\bgit\\s+switch\\s+-c\\b",
+            "\\bgit\\s+checkout\\s+-b\\b",
+            "\\bgit\\s+branch\\s+\\S"
+          ]
+        },
+        {
+          "label": "Commits on both branches",
+          "patterns": [
+            "\\bgit\\s+commit\\b[\\s\\S]*\\bgit\\s+commit\\b"
+          ]
+        },
+        {
+          "label": "Merges to trigger the conflict",
+          "patterns": [
+            "\\bgit\\s+merge\\b",
+            "\\bgit\\s+rebase\\b"
+          ]
+        },
+        {
+          "label": "Mentions conflict markers",
+          "patterns": [
+            "<<<<<<<",
+            "conflict marker"
+          ]
+        },
+        {
+          "label": "Stages the resolution (git add)",
+          "patterns": [
+            "\\bgit\\s+add\\b"
+          ]
+        },
+        {
+          "label": "Verifies history (git log)",
+          "patterns": [
+            "\\bgit\\s+log\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "git switch main\necho 'greeting = \"Hello\"' > config.py\ngit add config.py && git commit -m 'Add greeting config'\n\n# branch A edits line 1\ngit switch -c feature-a\necho 'greeting = \"Hello from A\"' > config.py\ngit commit -am 'Change greeting on feature-a'\n\n# main edits the same line\ngit switch main\necho 'greeting = \"Hello from main\"' > config.py\ngit commit -am 'Change greeting on main'\n\n# merge -> conflict\ngit merge feature-a\n# CONFLICT (content): Merge conflict in config.py\ngit status                    # shows 'both modified: config.py'\ncat config.py\n# <<<<<<< HEAD\n# greeting = \"Hello from main\"\n# =======\n# greeting = \"Hello from A\"\n# >>>>>>> feature-a\n\n# resolve: edit the file, keep the final line, remove the conflict markers\necho 'greeting = \"Hello from main and A\"' > config.py\ngit add config.py\ngit commit -m 'Merge feature-a, resolve greeting conflict'\n\ngit log --oneline --graph --all",
+      "explanation": "Tests understanding of how merge conflicts arise (both branches changed the same line since their common ancestor) and how to resolve them: edit the file, delete the `<<<<<<<`, `=======` and `>>>>>>>` markers, `git add` to mark it resolved, then commit. `git log --oneline --graph` should show the two diverging commits joined by a merge commit."
+    }
+  ]
+}

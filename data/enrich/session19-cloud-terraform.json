@@ -1,0 +1,220 @@
+{
+  "slug": "session19-cloud-terraform",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "IaaS (Infrastructure as a Service) provides virtualised infrastructure such as compute, storage and networks (e.g. EC2, VPC, EBS); you manage the OS and everything above it.",
+      "distractors": "Finished applications are SaaS, code hosting is a specific service, and email templates are unrelated.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "PaaS provides a managed platform for deploying applications: you supply code or containers and the provider runs the OS, runtime and scaling (e.g. Elastic Beanstalk, App Service, Heroku, Cloud Run).",
+      "distractors": "Raw hardware is closer to IaaS; Git branches and DNS records are individual features, not a platform.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "SaaS delivers ready-to-use software over a network, such as Gmail, Slack or Salesforce; the provider manages everything and you just use the app.",
+      "distractors": "Hypervisors, kernel modules and storage controllers are infrastructure components you would manage yourself.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "A region is a separate geographic area containing cloud infrastructure (e.g. ap-south-1 Mumbai), made up of multiple availability zones; you choose it for latency, compliance and cost.",
+      "distractors": "Container tags, processes and repositories have nothing to do with physical location.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "An availability zone is an isolated infrastructure location within a region (one or more data centres with independent power and networking); spreading across AZs gives high availability.",
+      "distractors": "Labels, variables and runner types are software settings, although Kubernetes does use a zone label to record a node's AZ.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "A VPC (Virtual Private Cloud) is a logically isolated virtual network in the cloud with your own CIDR range, subnets, route tables and gateways (Azure calls it a VNet).",
+      "distractors": "Images, editors and VCS protocols are unrelated.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "A subnet is an IP address range within a network (a slice of the VPC CIDR, e.g. 10.0.1.0/24); in AWS each subnet sits in exactly one AZ.",
+      "distractors": "Branches, pipeline stages and build layers are not networking concepts.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "A route table defines where network traffic is forwarded based on destination CIDR, e.g. 0.0.0.0/0 to an internet gateway for a public subnet, or to a NAT gateway for a private one.",
+      "distractors": "Module versions, restart counts and test coverage are unrelated to routing.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "A security group commonly controls allowed inbound and outbound traffic for attached resources. AWS security groups are stateful, allow-only rules (return traffic is automatically allowed).",
+      "distractors": "CPU instruction sets, YAML indentation and merge policies have nothing to do with network traffic.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "Terraform plus cloud services gives reproducible, versioned infrastructure provisioning: environments are defined in code, reviewed in PRs, planned before applying and recreated consistently.",
+      "distractors": "Terraform doesn't compile frontend code or remove networks, and it encourages reviewing changes through plan, not skipping review.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Defines a VPC / VNet with a CIDR",
+          "patterns": [
+            "\\bvpc\\b",
+            "\\bvnet\\b"
+          ]
+        },
+        {
+          "label": "Has a public subnet",
+          "patterns": [
+            "public\\s+subnet"
+          ]
+        },
+        {
+          "label": "Has a private subnet",
+          "patterns": [
+            "private\\s+subnet"
+          ]
+        },
+        {
+          "label": "Uses route tables (IGW / NAT routes)",
+          "patterns": [
+            "route\\s+table"
+          ]
+        },
+        {
+          "label": "Uses an internet gateway / NAT gateway",
+          "patterns": [
+            "internet\\s+gateway",
+            "\\bigw\\b",
+            "\\bnat\\b"
+          ]
+        },
+        {
+          "label": "Defines security rules (security group / NSG / NACL)",
+          "patterns": [
+            "security\\s+group",
+            "\\bnsg\\b",
+            "\\bnacl\\b",
+            "firewall"
+          ]
+        },
+        {
+          "label": "Explains the traffic flow",
+          "patterns": [
+            "flow",
+            "\\-\\->",
+            "->"
+          ]
+        }
+      ],
+      "modelAnswer": "Diagram (AWS, one AZ shown; repeat the subnets in a 2nd AZ for HA):\n\nInternet\n   |\n[Internet Gateway (IGW)]\n   |\nVPC 10.0.0.0/16\n +-- Public subnet 10.0.1.0/24 (AZ a)  -- public route table: 10.0.0.0/16 local, 0.0.0.0/0 -> IGW\n |     [ALB]   [NAT Gateway + Elastic IP]   (optional bastion)\n |\n +-- Private subnet 10.0.2.0/24 (AZ a) -- private route table: 10.0.0.0/16 local, 0.0.0.0/0 -> NAT Gateway\n       [App instances]   [DB subnet 10.0.3.0/24, no internet route]\n\nSecurity rules:\n- alb-sg: inbound 443 (and 80 for redirect) from 0.0.0.0/0\n- app-sg: inbound 8080 only from alb-sg (security group reference, not a CIDR)\n- db-sg: inbound 5432 only from app-sg\n- No SSH from 0.0.0.0/0; use SSM Session Manager or SSH from a bastion / admin IP /32\n\nTraffic flow:\n1. Inbound: user -> IGW -> ALB in the public subnet (alb-sg allows 443) -> app in the private subnet on 8080 (app-sg allows only alb-sg) -> DB on 5432 (db-sg allows only app-sg).\n2. Outbound from private: app -> private route table 0.0.0.0/0 -> NAT Gateway (public subnet) -> IGW -> internet (e.g. package updates). The internet cannot initiate connections to the private instances.\n3. Responses return automatically because security groups are stateful.",
+      "explanation": "Tests network design reasoning. What makes a subnet public is its route table (0.0.0.0/0 to an IGW), not its name; private subnets reach out through a NAT gateway. Look for layered security groups that reference each other instead of opening CIDRs, no admin ports open to the world, and a clear explanation of both inbound and outbound paths."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Creates a VPC (aws_vpc / network resource)",
+          "patterns": [
+            "aws_vpc",
+            "azurerm_virtual_network",
+            "google_compute_network"
+          ]
+        },
+        {
+          "label": "Creates a subnet",
+          "patterns": [
+            "aws_subnet",
+            "azurerm_subnet",
+            "google_compute_subnetwork"
+          ]
+        },
+        {
+          "label": "Creates one low-cost compute instance",
+          "patterns": [
+            "aws_instance",
+            "azurerm_linux_virtual_machine",
+            "google_compute_instance"
+          ]
+        },
+        {
+          "label": "Runs terraform plan before apply",
+          "patterns": [
+            "\\bterraform\\s+plan\\b"
+          ]
+        },
+        {
+          "label": "Applies (terraform apply)",
+          "patterns": [
+            "\\bterraform\\s+apply\\b"
+          ]
+        },
+        {
+          "label": "Destroys the lab resources (terraform destroy)",
+          "patterns": [
+            "\\bterraform\\s+destroy\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# main.tf\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"~> 5.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = var.region\n}\n\nvariable \"region\" {\n  type    = string\n  default = \"<your-region>\"\n}\n\ndata \"aws_availability_zones\" \"available\" {\n  state = \"available\"\n}\n\ndata \"aws_ami\" \"al2023\" {\n  most_recent = true\n  owners      = [\"amazon\"]\n  filter {\n    name   = \"name\"\n    values = [\"al2023-ami-*-x86_64\"]\n  }\n}\n\nresource \"aws_vpc\" \"lab\" {\n  cidr_block           = \"10.0.0.0/16\"\n  enable_dns_hostnames = true\n  tags                 = { Name = \"lab-vpc\" }\n}\n\nresource \"aws_internet_gateway\" \"igw\" {\n  vpc_id = aws_vpc.lab.id\n}\n\nresource \"aws_subnet\" \"public\" {\n  vpc_id                  = aws_vpc.lab.id\n  cidr_block              = \"10.0.1.0/24\"\n  availability_zone       = data.aws_availability_zones.available.names[0]\n  map_public_ip_on_launch = true\n  tags                    = { Name = \"lab-public\" }\n}\n\nresource \"aws_route_table\" \"public\" {\n  vpc_id = aws_vpc.lab.id\n  route {\n    cidr_block = \"0.0.0.0/0\"\n    gateway_id = aws_internet_gateway.igw.id\n  }\n}\n\nresource \"aws_route_table_association\" \"public\" {\n  subnet_id      = aws_subnet.public.id\n  route_table_id = aws_route_table.public.id\n}\n\nresource \"aws_instance\" \"web\" {\n  ami           = data.aws_ami.al2023.id\n  instance_type = \"t3.micro\"     # free-tier / low cost; t2.micro in older regions\n  subnet_id     = aws_subnet.public.id\n  tags          = { Name = \"lab-web\" }\n}\n\noutput \"instance_public_ip\" {\n  value = aws_instance.web.public_ip\n}\n\n# Credentials come from `aws configure` / SSO / environment, never from the .tf files\nterraform init\nterraform fmt && terraform validate\nterraform plan -out=tfplan      # review: Plan: 6 to add, 0 to change, 0 to destroy\nterraform apply tfplan\nterraform output instance_public_ip\nterraform destroy               # clean up so the sandbox incurs no ongoing cost",
+      "explanation": "Tests provisioning real cloud resources safely: provider configuration without hard-coded keys, a VPC with a subnet, an IGW and route so the subnet really is public, and one small instance. Review the plan's resource count before apply, and finish with `terraform destroy` (confirm 'Destroy complete! Resources: N destroyed') so nothing keeps billing. Look up the AMI with a data source instead of hard-coding a region-specific ID."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Defines a security group / firewall rule",
+          "patterns": [
+            "aws_security_group",
+            "security\\s+group",
+            "firewall",
+            "\\bnsg\\b"
+          ]
+        },
+        {
+          "label": "Opens only the application port (e.g. 80/443/8080)",
+          "patterns": [
+            "\\b(80|443|8080|3000|5000|8000)\\b"
+          ]
+        },
+        {
+          "label": "Does not open SSH (22) to 0.0.0.0/0: restricts it to an admin IP /32 or SSM",
+          "patterns": [
+            "/32\\b",
+            "session\\s+manager",
+            "\\bssm\\b",
+            "no\\s+ssh"
+          ]
+        },
+        {
+          "label": "Demonstrates SSH is blocked (nc / ssh timeout / describe rules)",
+          "patterns": [
+            "\\bnc\\b",
+            "\\bssh\\b[\\s\\S]*(timed?\\s*out|refused)",
+            "describe-security-groups",
+            "\\bnmap\\b"
+          ]
+        },
+        {
+          "label": "Verifies the app port works (curl)",
+          "patterns": [
+            "\\bcurl\\b",
+            "\\bnc\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "variable \"admin_cidr\" {\n  type        = string\n  description = \"Your public IP as /32, for SSH (e.g. 203.0.113.10/32)\"\n}\n\nresource \"aws_security_group\" \"web\" {\n  name   = \"web-sg\"\n  vpc_id = aws_vpc.lab.id\n\n  ingress {\n    description = \"App port from anywhere\"\n    from_port   = 80\n    to_port     = 80\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n\n  ingress {\n    description = \"SSH only from admin IP\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [var.admin_cidr]   # /32, never 0.0.0.0/0; or omit and use SSM Session Manager\n  }\n\n  egress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n# attach: vpc_security_group_ids = [aws_security_group.web.id] on aws_instance.web\n\n# Verify\naws ec2 describe-security-groups --group-ids <sg-id> --query \"SecurityGroups[0].IpPermissions\"\n#   port 80 from 0.0.0.0/0; port 22 only from 203.0.113.10/32\ncurl -I http://<instance-public-ip>          # HTTP/1.1 200 OK\nnc -vz -w 5 <instance-public-ip> 22          # from any other IP: times out (SG drops it silently)\nssh -o ConnectTimeout=5 ec2-user@<instance-public-ip>   # from a non-admin network: Connection timed out",
+      "explanation": "Tests least privilege at the network layer: only the application port is public, and SSH is limited to a single admin /32 (or removed in favour of SSM Session Manager). Security groups drop disallowed packets silently, so a blocked port shows a timeout, not 'connection refused'. Good evidence is the rule listing plus a successful curl to the app port and a timed-out SSH or nc attempt from a non-admin network."
+    }
+  ]
+}

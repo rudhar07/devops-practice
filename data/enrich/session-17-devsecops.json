@@ -1,0 +1,207 @@
+{
+  "slug": "session-17-devsecops",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "DevSecOps means integrating security throughout development and delivery, with automated checks in every stage of the pipeline and shared ownership between dev, ops and security.",
+      "distractors": "Security only after release, manual-only gates and avoiding updates are the anti-patterns DevSecOps is meant to replace.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "SAST (Static Application Security Testing) analyses source code or binaries without executing the application, finding issues like SQL injection patterns or unsafe functions early.",
+      "distractors": "Watching production traffic or running applications is DAST/runtime monitoring; DNS and Kubernetes events are unrelated.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "DAST (Dynamic Application Security Testing) tests a running application from the outside, sending real requests (as OWASP ZAP does) to find issues like XSS or misconfigured headers.",
+      "distractors": "Static source code is SAST's job; commit messages and image layers are not DAST targets.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "Dependency scanning (SCA) finds known vulnerabilities (CVEs) in third-party packages by matching your lockfiles against advisory databases, as Dependabot, npm audit or Snyk do.",
+      "distractors": "Shell aliases, branches and DNS speed have nothing to do with package vulnerabilities.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "Container image scanning inspects the OS and language packages inside an image for known vulnerabilities (and often misconfigurations or secrets), using tools like Trivy or Grype.",
+      "distractors": "It scans the image itself, not Service names, laptops or branch rules.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "Least privilege means granting only the permissions required for a task, e.g. a CI token with `contents: read` instead of admin.",
+      "distractors": "Shared tokens, admin-for-all and disabled authentication widen the blast radius of any compromise.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "Secrets committed to Git may be exposed through repository history: every clone and fork keeps them even after a later commit deletes the file, so a leaked secret must be rotated.",
+      "distractors": "Git stores text fine and YAML parsing or merges are unaffected; the problem is exposure, not breakage.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "An SBOM is a Software Bill of Materials: a machine-readable inventory (SPDX or CycloneDX) of the components and versions in your software, used to track vulnerabilities and licences.",
+      "distractors": "The other expansions are made up.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "A security gate blocks promotion when policy checks fail, for example stopping deployment if a scan finds Critical vulnerabilities.",
+      "distractors": "Gates exist to enforce checks, not to disable logs, allow vulnerabilities or skip tests.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "Shift-left means running security checks earlier in development (IDE, pre-commit, PR and CI) where fixes are cheaper.",
+      "distractors": "Scanning only after deployment is the opposite ('shift-right'); it has nothing to do with moving servers.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Builds the Docker image (docker build / build-push-action)",
+          "patterns": [
+            "\\bdocker\\s+(buildx\\s+)?build\\b",
+            "docker/build-push-action"
+          ]
+        },
+        {
+          "label": "Pushes to a registry (docker push / push: true)",
+          "patterns": [
+            "\\bdocker\\s+push\\b",
+            "\\bpush\\s*:\\s*true\\b"
+          ]
+        },
+        {
+          "label": "Logs in to the registry (docker login / login-action)",
+          "patterns": [
+            "\\bdocker\\s+login\\b",
+            "docker/login-action"
+          ]
+        },
+        {
+          "label": "Uses repository secrets (secrets.*)",
+          "patterns": [
+            "secrets\\."
+          ]
+        },
+        {
+          "label": "Runs in a CI pipeline (workflow / jobs)",
+          "patterns": [
+            "\\bjobs\\s*:",
+            "\\bstages\\s*:",
+            "\\bpipeline\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/docker.yml\n# Repository secrets: Settings > Secrets and variables > Actions > DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (an access token, not a password)\nname: docker\non:\n  push:\n    branches: [main]\npermissions:\n  contents: read\njobs:\n  build-push:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/setup-buildx-action@v3\n      - name: Log in to Docker Hub\n        uses: docker/login-action@v3\n        with:\n          username: ${{ secrets.DOCKERHUB_USERNAME }}\n          password: ${{ secrets.DOCKERHUB_TOKEN }}\n      - name: Build and push\n        uses: docker/build-push-action@v6\n        with:\n          context: .\n          push: true\n          tags: |\n            ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ github.sha }}\n            ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest",
+      "explanation": "Tests building and pushing an image without hard-coded credentials. The login must read from `${{ secrets.* }}` (or use GITHUB_TOKEN with `packages: write` for GHCR), and the workflow should grant minimal `permissions`. Verify that the run succeeds, the secret values appear masked as *** in logs, and the tag (ideally the commit SHA) shows up in the registry."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Adds SAST (CodeQL / Semgrep / SonarQube / Bandit)",
+          "patterns": [
+            "codeql",
+            "semgrep",
+            "sonar",
+            "bandit",
+            "\\bsast\\b"
+          ]
+        },
+        {
+          "label": "Adds dependency scanning (npm audit / Dependabot / Trivy fs / Snyk / OWASP dependency-check)",
+          "patterns": [
+            "\\bnpm\\s+audit\\b",
+            "dependabot",
+            "dependency-check",
+            "dependency-review",
+            "\\bsnyk\\b",
+            "pip-audit",
+            "trivy\\s+fs",
+            "scan-type\\s*:\\s*['\"]?fs"
+          ]
+        },
+        {
+          "label": "Adds secret scanning (Gitleaks / TruffleHog / GitHub secret scanning)",
+          "patterns": [
+            "gitleaks",
+            "trufflehog",
+            "secret\\s+scanning",
+            "detect-secrets"
+          ]
+        },
+        {
+          "label": "Makes later stages depend on the security job (needs)",
+          "patterns": [
+            "\\bneeds\\s*:"
+          ]
+        },
+        {
+          "label": "Makes it a required check / blocks on failure",
+          "patterns": [
+            "required",
+            "exit-code",
+            "fail"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/secure-ci.yml\nname: secure-ci\non: [push, pull_request]\npermissions:\n  contents: read\n  security-events: write\njobs:\n  security:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0              # full history so Gitleaks scans past commits\n      # SAST\n      - uses: github/codeql-action/init@v3\n        with:\n          languages: javascript\n      - uses: github/codeql-action/analyze@v3\n      # Dependency scanning (fails the job on HIGH or CRITICAL)\n      - uses: aquasecurity/trivy-action@<release-tag>   # pin third-party actions to a full commit SHA\n        with:\n          scan-type: fs\n          scan-ref: .\n          severity: HIGH,CRITICAL\n          exit-code: '1'\n      # Secret scanning\n      - uses: gitleaks/gitleaks-action@v2\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n  build:\n    needs: security                   # skipped if the security job fails\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: docker build -t myapp:${{ github.sha }} .\n\n# Required check: Settings > Branches (or Rulesets) > main > Require status checks to pass > select \"security\".\n# A PR then cannot merge while the security job fails.",
+      "explanation": "Tests layering three different scanners and making them blocking. Each scanner must exit non-zero on findings (e.g. Trivy `exit-code: '1'`), later jobs must declare `needs: security`, and the job should be marked a required status check in branch protection. Verify by committing a fake key or a known-vulnerable package version: the security job should go red, build should be skipped, and the PR merge button should be blocked. Pin third-party actions to a full commit SHA, since mutable tags can be hijacked."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Scans the container image (Trivy / Grype / Docker Scout)",
+          "patterns": [
+            "trivy",
+            "grype",
+            "docker\\s+scout",
+            "\\bsnyk\\s+container\\b"
+          ]
+        },
+        {
+          "label": "Sets the severity threshold (e.g. CRITICAL,HIGH)",
+          "patterns": [
+            "critical",
+            "\\bhigh\\b",
+            "severity"
+          ]
+        },
+        {
+          "label": "Fails the scan when the threshold is exceeded (exit-code 1 / fail-on)",
+          "patterns": [
+            "exit-code",
+            "fail-on",
+            "--exit-code"
+          ]
+        },
+        {
+          "label": "Deployment depends on the scan (needs / gate)",
+          "patterns": [
+            "\\bneeds\\s*:",
+            "\\bgate\\b"
+          ]
+        },
+        {
+          "label": "Has a deploy stage",
+          "patterns": [
+            "deploy"
+          ]
+        }
+      ],
+      "modelAnswer": "# .github/workflows/image-gate.yml\nname: image-gate\non:\n  push:\n    branches: [main]\njobs:\n  build-scan:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: docker build -t myapp:${{ github.sha }} .\n      - name: Trivy image scan (gate)\n        uses: aquasecurity/trivy-action@<release-tag>   # pin third-party actions to a full commit SHA\n        with:\n          image-ref: myapp:${{ github.sha }}\n          severity: CRITICAL,HIGH       # agreed threshold\n          ignore-unfixed: true\n          exit-code: '1'                # non-zero exit = gate fails\n          format: table\n  deploy:\n    needs: build-scan                 # deploy only runs if the scan passed\n    runs-on: ubuntu-latest\n    environment: production\n    steps:\n      - run: echo \"Deploying myapp:${{ github.sha }}\"\n\n# CLI equivalent of the gate:\ntrivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 myapp:latest",
+      "explanation": "Tests turning a scan report into an enforced policy. The scanner must be configured with the agreed severities and a failing exit code, and deploy must depend on it with `needs`, so a vulnerable image never reaches deploy. Verify by building from an old base image (e.g. an outdated Debian/Alpine tag): the scan job fails and deploy shows as skipped; then a patched base image passes."
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "slug": "session1-devops-engineer-roadmap",
+  "mcq": [
+    {
+      "n": 1,
+      "explanation": "DevOps aims for faster, reliable delivery through collaboration and automation: development and operations work together and automate the path from commit to production so changes ship often and safely.",
+      "distractors": "DevOps keeps developers, version control and testing; it adds automation and shared ownership rather than removing any of them.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 2,
+      "explanation": "CI stands for Continuous Integration: developers merge small changes into a shared branch frequently, and every merge is automatically built and tested.",
+      "distractors": "Central Installation, Cloud Inspection and Code Isolation are not standard terms; the opposite of isolation is the point of CI.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 3,
+      "explanation": "Automated tests in CI run on every push or pull request, so a defect is caught minutes after it is introduced instead of in production.",
+      "distractors": "Manual-only deployment, disabled logs and skipped reviews all make defects harder to find, not easier.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 4,
+      "explanation": "Infrastructure as code means managing infrastructure using versioned configuration (for example Terraform or Ansible files in Git), so environments are reproducible, reviewable and automated.",
+      "distractors": "Undocumented settings and manual hardware purchases are exactly what IaC replaces; frontend code is unrelated.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 5,
+      "explanation": "Git is the standard distributed version control system for source code, usually hosted on GitHub, GitLab or Bitbucket.",
+      "distractors": "Prometheus and Grafana are for monitoring and dashboards; Nginx is a web server and reverse proxy.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 6,
+      "explanation": "A CI/CD pipeline automates build, test and delivery steps: compiling or packaging the code, running tests, and deploying the artifact to environments.",
+      "distractors": "Attendance, domain purchases and keyboard settings are not part of software delivery.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 7,
+      "explanation": "Containers package applications with dependencies (runtime, libraries, config) into one image, so the app behaves the same on a laptop, in CI and in production.",
+      "distractors": "Containers still need networking, cannot guarantee bug-free code, and often run databases rather than replacing them.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 8,
+      "explanation": "Monitoring is for tracking system health and behavior: metrics, logs and alerts show whether services are up, fast and error-free.",
+      "distractors": "Formatting YAML, compiling code and creating branches are development tasks, not monitoring.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 9,
+      "explanation": "The core DevOps mindset is shared ownership across development and operations: the people who build a service also care about how it runs, and both sides collaborate.",
+      "distractors": "Siloed teams, manual-only changes and ignoring production feedback are the anti-patterns DevOps was created to fix.",
+      "keyCheck": "ok"
+    },
+    {
+      "n": 10,
+      "explanation": "Continuous feedback is a DevOps lifecycle activity: monitoring, incidents and user input flow back into planning so the next iteration improves.",
+      "distractors": "Disabling security scans, ignoring incidents and deploying once forever contradict the continuous, feedback-driven loop.",
+      "keyCheck": "ok"
+    }
+  ],
+  "labs": [
+    {
+      "n": 1,
+      "checks": [
+        {
+          "label": "Starts from a code commit / push",
+          "patterns": [
+            "\\bcommit",
+            "\\bpush"
+          ]
+        },
+        {
+          "label": "Has a build stage",
+          "patterns": [
+            "\\bbuild"
+          ]
+        },
+        {
+          "label": "Has a test stage",
+          "patterns": [
+            "\\btest"
+          ]
+        },
+        {
+          "label": "Has a package / artifact stage",
+          "patterns": [
+            "\\bpackag",
+            "\\bartifact",
+            "\\bimage\\b"
+          ]
+        },
+        {
+          "label": "Has a deploy stage",
+          "patterns": [
+            "\\bdeploy"
+          ]
+        },
+        {
+          "label": "Has a monitoring stage",
+          "patterns": [
+            "\\bmonitor"
+          ]
+        }
+      ],
+      "modelAnswer": "Scenario: a Node.js web app hosted on GitHub.\n\n[Developer] --git commit/push--> [GitHub repo]\n   |\n   v  (webhook triggers pipeline, e.g. GitHub Actions)\n1. Build    : checkout code, npm ci, lint, compile\n2. Test     : run unit + integration tests (npm test); fail pipeline on any failure\n3. Package  : docker build -t registry.example.com/shop:<git-sha> . and push the image (the artifact) to a registry\n4. Deploy   : deploy the image to staging, run smoke tests, then promote to production (manual approval or automatic)\n5. Monitor  : Prometheus/Grafana metrics, logs and alerts on errors and latency\n   |\n   +--feedback (alerts, incidents)--> back to developers / next commit",
+      "explanation": "Tests whether you understand the ordered stages of a CI/CD pipeline and what each one does. A good answer starts with a commit triggering the pipeline, shows build, test, package (an immutable artifact such as a container image), deploy and monitoring, and ideally closes the loop with feedback from monitoring to developers."
+    },
+    {
+      "n": 2,
+      "checks": [
+        {
+          "label": "Describes the monolith",
+          "patterns": [
+            "\\bmonolith"
+          ]
+        },
+        {
+          "label": "Describes microservices",
+          "patterns": [
+            "micro-?services?"
+          ]
+        },
+        {
+          "label": "Names benefits",
+          "patterns": [
+            "\\bbenefit",
+            "\\badvantage",
+            "\\bpros?\\b"
+          ]
+        },
+        {
+          "label": "Names challenges",
+          "patterns": [
+            "\\bchallenge",
+            "\\bdisadvantage",
+            "\\bcons?\\b",
+            "\\bdrawback"
+          ]
+        },
+        {
+          "label": "Mentions independent deploy or scaling",
+          "patterns": [
+            "\\bscal",
+            "\\bindependent"
+          ]
+        }
+      ],
+      "modelAnswer": "Use case: an online shop with catalog, cart, orders, payments and user accounts.\n\nMonolith: one codebase and one deployable (e.g. a single app + one database). Simple to develop, test and deploy at first, but any change redeploys the whole shop and you scale everything together.\n\nMicroservices: separate services (catalog, cart, orders, payments, users), each with its own codebase, pipeline and data store, talking over HTTP/gRPC or a message queue.\n\nOperational benefits of microservices:\n1. Independent deployment: the payments team can ship a fix without redeploying the catalog, so releases are smaller and faster.\n2. Independent scaling and fault isolation: scale only the catalog service during a sale; a crash in recommendations does not take down checkout.\n\nChallenges of microservices:\n1. Operational complexity: many services to deploy, monitor and secure; needs containers/orchestration, centralized logging and distributed tracing.\n2. Distributed data and networking: calls can fail or be slow, so you need retries, timeouts and API versioning, and keeping data consistent across services (e.g. order + payment) is harder.",
+      "explanation": "Tests whether you can weigh architecture choices from an operations point of view. Look for a clear description of each style for the shopping case, two concrete operational benefits (independent deploys, targeted scaling, fault isolation) and two real challenges (more moving parts, observability, network failures, data consistency)."
+    },
+    {
+      "n": 3,
+      "checks": [
+        {
+          "label": "Covers version control (Git)",
+          "patterns": [
+            "\\bgit\\b",
+            "version control"
+          ]
+        },
+        {
+          "label": "Covers automated tests",
+          "patterns": [
+            "\\btest"
+          ]
+        },
+        {
+          "label": "Covers containerization (Docker)",
+          "patterns": [
+            "\\bcontaineri",
+            "\\bdocker"
+          ]
+        },
+        {
+          "label": "Covers CI/CD",
+          "patterns": [
+            "\\bci\\s*/\\s*cd\\b",
+            "\\bpipeline"
+          ]
+        },
+        {
+          "label": "Covers monitoring",
+          "patterns": [
+            "\\bmonitor"
+          ]
+        },
+        {
+          "label": "Gives reasons",
+          "patterns": [
+            "\\bwhy\\b",
+            "\\breason",
+            "\\bbecause\\b"
+          ]
+        }
+      ],
+      "modelAnswer": "DevOps roadmap for a small team that deploys manually\n\nPriority 1 - Version control (Git + GitHub, weeks 1-2)\nReason: everything else (pipelines, reviews, rollbacks) depends on having all code and config in one history. Adopt a simple branch + pull request flow.\n\nPriority 2 - Automated tests (weeks 2-4)\nReason: a safety net so changes can be shipped quickly without breaking things; start with unit tests for critical paths.\n\nPriority 3 - Containerization (Docker, weeks 4-6)\nReason: one image runs the same in dev, test and prod, which removes 'works on my machine' problems and makes deployments repeatable.\n\nPriority 4 - CI/CD pipeline (GitHub Actions, weeks 6-8)\nReason: every push builds, tests and packages automatically; merges to main deploy to staging and then production, replacing manual, error-prone steps.\n\nPriority 5 - Monitoring and alerting (Prometheus/Grafana or a hosted tool, weeks 8-10)\nReason: once deploys are frequent you need fast feedback on health, errors and latency, plus alerts so incidents are caught before users report them.\n\nSuccess measures: deployment frequency, lead time, change failure rate, time to restore.",
+      "explanation": "Tests whether you can order DevOps practices by dependency: version control first, then tests, containers, a pipeline that uses both, and monitoring to close the feedback loop. Each item should carry a short, concrete reason; bonus points for timelines and measurable outcomes such as the DORA metrics."
+    }
+  ]
+}
