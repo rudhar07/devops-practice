@@ -5,13 +5,49 @@
   const STORE_PREFIX = "devops-practice:";
   const LETTERS = ["A", "B", "C", "D"];
 
-  // ---------- storage (per-browser progress; the page works without it) ----------
+  // ---------- storage ----------
+  // Progress lives in localStorage, which survives closing the tab or the browser. It is lost only
+  // when the browser clears site data (private/incognito windows, "clear on exit" settings), and
+  // then the page shows a warning instead of failing silently.
+  function raw(slug) {
+    try { return localStorage.getItem(STORE_PREFIX + slug); } catch (e) { return null; }
+  }
   function load(slug) {
-    try { return JSON.parse(localStorage.getItem(STORE_PREFIX + slug)) || { mcq: {}, labs: {} }; }
-    catch (e) { return { mcq: {}, labs: {} }; }
+    try {
+      const st = JSON.parse(raw(slug)) || {};
+      return { mcq: st.mcq || {}, labs: st.labs || {} };
+    } catch (e) { return { mcq: {}, labs: {} }; }
   }
   function save(slug, state) {
-    try { localStorage.setItem(STORE_PREFIX + slug, JSON.stringify(state)); } catch (e) { /* private mode */ }
+    try {
+      localStorage.setItem(STORE_PREFIX + slug, JSON.stringify(state));
+      if (window.__cqMarkSeen) window.__cqMarkSeen();
+      return true;
+    }
+    catch (e) { showStorageWarning(); return false; }
+  }
+  function storageWorks() {
+    try {
+      const k = STORE_PREFIX + "__test";
+      localStorage.setItem(k, "1");
+      const ok = localStorage.getItem(k) === "1";
+      localStorage.removeItem(k);
+      return ok;
+    } catch (e) { return false; }
+  }
+  function showStorageWarning() {
+    if (document.getElementById("storage-warning")) return;
+    const main = document.querySelector("main");
+    if (!main) return;
+    const w = document.createElement("div");
+    w.id = "storage-warning";
+    w.className = "feedback bad";
+    w.setAttribute("role", "alert");
+    w.innerHTML = "<span class=\"verdict\">Progress can't be saved in this browser window</span>" +
+      "<p>This browser is blocking site storage (for example a Private/Incognito window, or a setting that " +
+      "clears site data). Your answers will work, but they'll be lost when the page closes. Open the site in a " +
+      "normal window to keep your progress.</p>";
+    main.insertBefore(w, main.firstChild);
   }
 
   // ---------- helpers ----------
@@ -103,27 +139,46 @@
   }
 
   // ---------- session page ----------
+  // Draws (or redraws) every question of the session from what is saved in storage.
+  function drawSession(S) {
+    const state = load(S.slug);
+    const mcqBox = document.getElementById("mcqs");
+    const labBox = document.getElementById("labs");
+    mcqBox.innerHTML = "";
+    labBox.innerHTML = "";
+    S.mcqs.forEach(q => mcqBox.appendChild(renderMcq(S, q, state)));
+    S.labs.forEach(l => labBox.appendChild(renderLab(S, l, state)));
+    updateScore(S, state);
+  }
+
   function renderSession() {
     const S = window.SESSION;
     if (!S) return;
-    const state = load(S.slug);
     document.title = `${S.label}: ${S.title} · DevOps Practice`;
     document.getElementById("s-label").textContent = S.label;
     document.getElementById("s-title").textContent = S.title;
-
-    const mcqBox = document.getElementById("mcqs");
-    S.mcqs.forEach(q => mcqBox.appendChild(renderMcq(S, q, state)));
-
     const fmt = document.getElementById("lab-format");
     if (S.labFormat && fmt) fmt.innerHTML = "<b>Suggested format:</b> " + rich(S.labFormat);
-    const labBox = document.getElementById("labs");
-    S.labs.forEach(l => labBox.appendChild(renderLab(S, l, state)));
 
-    updateScore(S, state);
+    drawSession(S);
+    let seen = raw(S.slug);
+    // Redraw if the saved answers changed while this page wasn't looking: restored from the
+    // back/forward cache, the tab became visible again, or the same session was answered in another tab.
+    const refreshIfChanged = () => {
+      const now = raw(S.slug);
+      if (now !== seen) { seen = now; drawSession(S); }
+    };
+    window.addEventListener("pageshow", e => { if (e.persisted) refreshIfChanged(); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshIfChanged(); });
+    window.addEventListener("storage", e => { if (e.key === STORE_PREFIX + S.slug) refreshIfChanged(); });
+    // Our own saves are not "changes from elsewhere".
+    window.__cqMarkSeen = () => { seen = raw(S.slug); };
+
     document.getElementById("reset").addEventListener("click", () => {
       if (!confirm("Clear your answers for this session?")) return;
       try { localStorage.removeItem(STORE_PREFIX + S.slug); } catch (e) {}
-      location.reload();
+      seen = raw(S.slug);
+      drawSession(S);
     });
 
     // prev / next
@@ -263,6 +318,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     initTheme();
+    if (!storageWorks()) showStorageWarning();
     if (document.body.dataset.page === "index") initIndex();
     if (document.body.dataset.page === "session") renderSession();
   });
