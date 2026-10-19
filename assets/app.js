@@ -60,6 +60,7 @@
   function renderIndex() {
     const list = window.SESSIONS || [];
     const grid = document.getElementById("grid");
+    grid.innerHTML = "";  // safe to call again: progress is redrawn from storage each time
     let answered = 0, correct = 0, labsPassed = 0, total = 0, totalLabs = 0;
     list.forEach(s => {
       const st = load(s.slug);
@@ -68,8 +69,9 @@
       const lp = Object.values(st.labs).filter(v => v.passed).length;
       answered += a; correct += c; labsPassed += lp; total += s.mcqCount; totalLabs += s.labCount;
       const pct = Math.round((a / s.mcqCount) * 100);
-      const card = el("a", { class: "card", href: "sessions/" + pageFile(s) },
-        `<div class="num">${esc(s.label)}</div>
+      const done = a === s.mcqCount;
+      const card = el("a", { class: "card" + (done ? " done" : ""), href: "sessions/" + pageFile(s) },
+        `<div class="num">${esc(s.label)}${done ? ' <span class="badge">✓ Completed</span>' : ""}</div>
          <div class="title">${esc(s.title)}</div>
          <div class="meta">${s.mcqCount} MCQs · ${s.labCount} labs${a ? ` · <b>${c}/${a}</b> correct` : ""}${lp ? ` · ${lp}/${s.labCount} labs ✓` : ""}</div>
          <div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>`);
@@ -82,11 +84,21 @@
          <div class="stat"><b>${answered ? Math.round((correct / answered) * 100) : 0}%</b><span>MCQ accuracy</span></div>
          <div class="stat"><b>${labsPassed}/${totalLabs}</b><span>labs passed</span></div>`;
     }
+  }
+
+  function initIndex() {
+    renderIndex();
+    // Browsers (Safari especially) restore the home page from their back/forward cache without
+    // re-running scripts, which would show old progress. Redraw whenever the page is shown again,
+    // the tab becomes visible, or another tab saves answers.
+    window.addEventListener("pageshow", e => { if (e.persisted) renderIndex(); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) renderIndex(); });
+    window.addEventListener("storage", e => { if (!e.key || e.key.startsWith(STORE_PREFIX)) renderIndex(); });
     const reset = document.getElementById("reset-all");
     if (reset) reset.addEventListener("click", () => {
       if (!confirm("Clear all saved answers in this browser?")) return;
-      list.forEach(s => { try { localStorage.removeItem(STORE_PREFIX + s.slug); } catch (e) {} });
-      location.reload();
+      (window.SESSIONS || []).forEach(s => { try { localStorage.removeItem(STORE_PREFIX + s.slug); } catch (e) {} });
+      renderIndex();
     });
   }
 
@@ -251,7 +263,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     initTheme();
-    if (document.body.dataset.page === "index") renderIndex();
+    if (document.body.dataset.page === "index") initIndex();
     if (document.body.dataset.page === "session") renderSession();
   });
 })();

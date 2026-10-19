@@ -171,3 +171,10 @@ textarea {
   .q { padding: 14px 12px; }
   .stat { min-width: 0; flex: 1; }
 }
+
+/* Completed session badge */
+.badge {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; font-size: .72rem;
+  letter-spacing: 0; text-transform: none; background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-border);
+}
+.card.done { border-color: var(--ok-border); }
