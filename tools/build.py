@@ -11,6 +11,7 @@ Run from the repo root:  python3 tools/build.py
 It fails loudly if a sheet doesn't parse, or if a lab's model answer doesn't pass its own checks.
 """
 import glob
+import hashlib
 import html
 import json
 import os
@@ -42,6 +43,12 @@ TITLES = {
     20: "Monitoring, Observability & GitOps",
 }
 LABELS = {6: "Session 6 & 7"}
+
+
+def version(path):
+    """Short content hash, appended as ?v=... so browsers never mix a new page with old cached files."""
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()[:10]
 
 
 def parse_sheet(path):
@@ -111,7 +118,7 @@ SESSION_HTML = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{label}: {title} · DevOps Practice</title>
 <meta name="description" content="Practice MCQs and lab questions for {label}: {title}.">
-<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/style.css?v={v_css}">
 </head>
 <body data-page="session">
 <header class="top"><div class="wrap">
@@ -136,9 +143,9 @@ SESSION_HTML = """<!doctype html>
   <nav class="pager" id="pager" aria-label="Session navigation"></nav>
   <p class="foot">Questions and answer key from the course's <a href="{source}">DevOps Exam Practice sheets</a>. Explanations, lab checks and model answers were written for this site; your answers are saved only in this browser.</p>
 </main>
-<script src="../data/sessions-index.js"></script>
-<script src="../data/session-{nn}.js"></script>
-<script src="../assets/app.js"></script>
+<script src="../data/sessions-index.js?v={v_index}"></script>
+<script src="../data/session-{nn}.js?v={v_data}"></script>
+<script src="../assets/app.js?v={v_js}"></script>
 </body>
 </html>
 """
@@ -150,7 +157,7 @@ INDEX_HTML = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DevOps Exam Practice</title>
 <meta name="description" content="Interactive practice for the DevOps course: {mcqs} MCQs with explanations and {labs} lab questions with instant checks.">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v={v_css}">
 </head>
 <body data-page="index">
 <header class="top"><div class="wrap">
@@ -166,8 +173,8 @@ INDEX_HTML = """<!doctype html>
   <p style="margin-top:20px"><button class="btn" id="reset-all" type="button">Reset all progress</button></p>
   <p class="foot">Questions and answer key from the course's <a href="{source}">DevOps Exam Practice sheets</a>. Explanations, lab checks and model answers were written for this site.</p>
 </main>
-<script src="data/sessions-index.js"></script>
-<script src="assets/app.js"></script>
+<script src="data/sessions-index.js?v={v_index}"></script>
+<script src="assets/app.js?v={v_js}"></script>
 </body>
 </html>
 """
@@ -196,15 +203,20 @@ def main():
               "mcqCount": len(s["mcqs"]), "labCount": len(s["labs"])} for s in sheets]
     with open(os.path.join(ROOT, "data", "sessions-index.js"), "w", encoding="utf-8") as f:
         f.write("window.SESSIONS = " + json.dumps(index, ensure_ascii=False, indent=1) + ";\n")
+    v = {"v_css": version(os.path.join(ROOT, "assets", "style.css")),
+         "v_js": version(os.path.join(ROOT, "assets", "app.js")),
+         "v_index": version(os.path.join(ROOT, "data", "sessions-index.js"))}
     for s in sheets:
         nn = f"{s['num']:02d}"
-        with open(os.path.join(ROOT, "data", f"session-{nn}.js"), "w", encoding="utf-8") as f:
+        data_path = os.path.join(ROOT, "data", f"session-{nn}.js")
+        with open(data_path, "w", encoding="utf-8") as f:
             f.write("window.SESSION = " + json.dumps(s, ensure_ascii=False, indent=1) + ";\n")
         with open(os.path.join(ROOT, "sessions", f"session-{nn}.html"), "w", encoding="utf-8") as f:
-            f.write(SESSION_HTML.format(label=html.escape(s["label"]), title=html.escape(s["title"]), nn=nn, source=SOURCE_REPO))
+            f.write(SESSION_HTML.format(label=html.escape(s["label"]), title=html.escape(s["title"]), nn=nn,
+                                        source=SOURCE_REPO, v_data=version(data_path), **v))
     with open(os.path.join(ROOT, "index.html"), "w", encoding="utf-8") as f:
         f.write(INDEX_HTML.format(sessions=len(sheets), mcqs=sum(len(s["mcqs"]) for s in sheets),
-                                  labs=sum(len(s["labs"]) for s in sheets), source=SOURCE_REPO))
+                                  labs=sum(len(s["labs"]) for s in sheets), source=SOURCE_REPO, **v))
     print(f"built {len(sheets)} sessions, {sum(len(s['mcqs']) for s in sheets)} MCQs, "
           f"{sum(len(s['labs']) for s in sheets)} labs; problems: {len(problems)}")
 
